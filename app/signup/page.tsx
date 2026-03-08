@@ -46,6 +46,8 @@ export default function SignupPage() {
 
     setIsLoading(true)
     try {
+      console.log('[v0] Signup attempt:', { name: formData.name, email: formData.email })
+      
       const response = await fetch('http://localhost:5000/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,19 +58,24 @@ export default function SignupPage() {
         }),
       })
 
+      console.log('[v0] Response status:', response.status)
+      
       const data = await response.json()
 
       if (!response.ok) {
         setError(data.message || 'Signup failed')
+        console.log('[v0] Signup error:', data.message)
         return
       }
 
+      console.log('[v0] Signup successful, redirecting...')
       // Store token
       localStorage.setItem('token', data.token)
       router.push('/dashboard')
     } catch (err) {
-      setError('An error occurred. Please try again.')
-      console.error(err)
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(`Connection error: ${errorMessage}. Make sure backend is running on port 5000.`)
+      console.error('[v0] Signup error:', err)
     } finally {
       setIsLoading(false)
     }

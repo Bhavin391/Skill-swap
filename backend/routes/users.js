@@ -1,7 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const { ObjectId } = require('mongodb');
 
-module.exports = (User) => {
+module.exports = (usersCollection) => {
   const router = express.Router();
   const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -25,8 +26,12 @@ module.exports = (User) => {
   // Get current user
   router.get('/me', verifyToken, async (req, res) => {
     try {
-      const user = await User.findById(req.userId).select('-password');
-      res.json({ user });
+      const user = await usersCollection.findOne({ _id: new ObjectId(req.userId) });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      const { password, ...userWithoutPassword } = user;
+      res.json({ user: { ...userWithoutPassword, _id: user._id.toString() } });
     } catch (error) {
       console.error('[v0] Error fetching user:', error);
       res.status(500).json({ message: 'Error fetching user' });
@@ -38,16 +43,23 @@ module.exports = (User) => {
     try {
       const { skills_offering, skills_learning } = req.body;
 
-      const user = await User.findByIdAndUpdate(
-        req.userId,
+      const result = await usersCollection.findOneAndUpdate(
+        { _id: new ObjectId(req.userId) },
         {
-          skills_offering: skills_offering || [],
-          skills_learning: skills_learning || [],
+          $set: {
+            skills_offering: skills_offering || [],
+            skills_learning: skills_learning || [],
+          },
         },
-        { new: true }
-      ).select('-password');
+        { returnDocument: 'after' }
+      );
 
-      res.json({ message: 'Skills updated', user });
+      if (!result.value) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const { password, ...userWithoutPassword } = result.value;
+      res.json({ message: 'Skills updated', user: { ...userWithoutPassword, _id: result.value._id.toString() } });
     } catch (error) {
       console.error('[v0] Error updating skills:', error);
       res.status(500).json({ message: 'Error updating skills' });
@@ -57,11 +69,12 @@ module.exports = (User) => {
   // Get user by ID
   router.get('/:id', async (req, res) => {
     try {
-      const user = await User.findById(req.params.id).select('-password');
+      const user = await usersCollection.findOne({ _id: new ObjectId(req.params.id) });
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      res.json({ user });
+      const { password, ...userWithoutPassword } = user;
+      res.json({ user: { ...userWithoutPassword, _id: user._id.toString() } });
     } catch (error) {
       console.error('[v0] Error fetching user:', error);
       res.status(500).json({ message: 'Error fetching user' });

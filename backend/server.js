@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
+const { MongoClient, ObjectId } = require('mongodb');
 const cors = require('cors');
 
 const app = express();
@@ -9,70 +9,100 @@ const app = express();
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[v0] ${req.method} ${req.path}`);
+  next();
+});
+
 // MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/skillswap';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const DB_NAME = 'skillswap';
 
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => console.log('[v0] Connected to MongoDB'))
-  .catch(err => console.error('[v0] MongoDB connection error:', err));
+let db = null;
+let usersCollection = null;
+let chatsCollection = null;
+let messagesCollection = null;
 
-// Models
-const userSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, unique: true },
-  password: String,
-  skills_offering: [String],
-  skills_learning: [String],
-  created_at: { type: Date, default: Date.now },
-});
+const client = new MongoClient(MONGO_URI);
 
-const chatSchema = new mongoose.Schema({
-  user1_id: mongoose.Schema.Types.ObjectId,
-  user2_id: mongoose.Schema.Types.ObjectId,
-  created_at: { type: Date, default: Date.now },
-});
+async function connectDB() {
+  try {
+    await client.connect();
+    db = client.db(DB_NAME);
+    usersCollection = db.collection('users');
+    chatsCollection = db.collection('chats');
+    messagesCollection = db.collection('messages');
 
-const messageSchema = new mongoose.Schema({
-  chat_id: mongoose.Schema.Types.ObjectId,
-  sender_id: mongoose.Schema.Types.ObjectId,
-  text: String,
-  timestamp: { type: Date, default: Date.now },
-});
+    // Create indexes
+    await usersCollection.createIndex({ email: 1 }, { unique: true });
+    await chatsCollection.createIndex({ user1_id: 1, user2_id: 1 });
+    await messagesCollection.createIndex({ chat_id: 1 });
+    await messagesCollection.createIndex({ timestamp: 1 });
 
-const User = mongoose.model('User', userSchema);
-const Chat = mongoose.model('Chat', chatSchema);
-const Message = mongoose.model('Message', messageSchema);
+    console.log('[v0] Connected to MongoDB');
+    return true;
+  } catch (err) {
+    console.error('[v0] MongoDB connection error:', err);
+    process.exit(1);
+  }
+}
 
-// Routes - Import from separate files
-const authRoutes = require('./routes/auth')(User);
-const userRoutes = require('./routes/users')(User);
-const matchRoutes = require('./routes/matches')(User, Chat);
-const chatRoutes = require('./routes/chat')(Chat, Message, User);
+async function startServer() {
+  await connectDB();
 
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/matches', matchRoutes);
-app.use('/api/chats', chatRoutes);
-app.use('/api/messages', require('./routes/messages')(Message, Chat));
+  // Routes - Import from separate files (after DB is connected)
+  const authRoutes = require('./routes/auth')(usersCollection);
+  const userRoutes = require('./routes/users')(usersCollection);
+  const matchRoutes = require('./routes/matches')(usersCollection);
+  const chatRoutes = require('./routes/chat')(chatsCollection, messagesCollection, usersCollection);
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK' });
-});
+  app.use('/api/auth', authRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/matches', matchRoutes);
+  app.use('/api/chats', chatRoutes);
+  app.use('/api/messages', require('./routes/messages')(messagesCollection, chatsCollection));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('[v0] Error:', err.message);
-  res.status(500).json({ message: 'Internal server error' });
-});
+  // Root route
+  app.get('/', (req, res) => {
+    res.json({ message: 'SkillSwap API - Backend running', status: 'OK' });
+  });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`[v0] SkillSwap backend running on port ${PORT}`);
-});
+  // Health check
+  app.get('/health', (req, res) => {
+    res.json({ status: 'OK' });
+  });
+
+  // Explicit preflight handler for CORS
+  app.options('*', cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }));
+
+  // 404 handler
+  app.use((req, res) => {
+    console.log('[v0] 404 Not Found:', req.method, req.path);
+    res.status(404).json({ message: 'Route not found' });
+  });
+
+  // Error handling middleware
+  app.use((err, req, res, next) => {
+    console.error('[v0] Error:', err.message);
+    res.status(500).json({ message: 'Internal server error' });
+  });
+
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[v0] SkillSwap backend running on http://localhost:${PORT}`);
+    console.log(`[v0] Frontend should connect to http://localhost:${PORT}/api`);
+  });
+}
+
+startServer();

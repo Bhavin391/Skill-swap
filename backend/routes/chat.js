@@ -1,8 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
+const { ObjectId } = require('mongodb');
 
-module.exports = (Chat, Message, User) => {
+module.exports = (chatsCollection, messagesCollection, usersCollection) => {
   const router = express.Router();
   const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -26,11 +26,11 @@ module.exports = (Chat, Message, User) => {
   // Get all chats for current user
   router.get('/', verifyToken, async (req, res) => {
     try {
-      const userId = new mongoose.Types.ObjectId(req.userId);
+      const userId = new ObjectId(req.userId);
       
-      const chats = await Chat.find({
+      const chats = await chatsCollection.find({
         $or: [{ user1_id: userId }, { user2_id: userId }],
-      }).lean();
+      }).toArray();
 
       // Get chat details with last messages
       const chatDetails = await Promise.all(
@@ -40,20 +40,27 @@ module.exports = (Chat, Message, User) => {
               ? chat.user2_id
               : chat.user1_id;
 
-          const otherUser = await User.findById(otherUserId).select('name email');
-          const lastMessage = await Message.findOne({
+          const otherUser = await usersCollection.findOne({ _id: otherUserId });
+          const lastMessage = await messagesCollection.findOne(
+            { chat_id: chat._id },
+            { sort: { timestamp: -1 } }
+          );
+
+          // Count unread messages from the other user
+          const unreadCount = await messagesCollection.countDocuments({
             chat_id: chat._id,
-          })
-            .sort({ timestamp: -1 })
-            .lean();
+            sender_id: otherUserId,
+            seen: false,
+          });
 
           return {
-            _id: chat._id,
-            user_id: otherUserId,
+            _id: chat._id.toString(),
+            user_id: otherUserId.toString(),
             name: otherUser?.name || 'Unknown',
             email: otherUser?.email || '',
             last_message: lastMessage?.text || '',
             last_message_time: lastMessage?.timestamp || null,
+            unread_count: unreadCount,
           };
         })
       );
@@ -68,7 +75,7 @@ module.exports = (Chat, Message, User) => {
   // Get specific chat with messages
   router.get('/:chatId', verifyToken, async (req, res) => {
     try {
-      const chat = await Chat.findById(req.params.chatId);
+      const chat = await chatsCollection.findOne({ _id: new ObjectId(req.params.chatId) });
 
       if (!chat) {
         return res.status(404).json({ message: 'Chat not found' });
@@ -88,19 +95,18 @@ module.exports = (Chat, Message, User) => {
           ? chat.user2_id
           : chat.user1_id;
 
-      const otherUser = await User.findById(otherUserId).select(
-        'name email skills_offering skills_learning'
-      );
+      const otherUser = await usersCollection.findOne({ _id: otherUserId });
 
       // Get messages
-      const messages = await Message.find({ chat_id: req.params.chatId })
+      const messages = await messagesCollection
+        .find({ chat_id: chat._id })
         .sort({ timestamp: 1 })
-        .lean();
+        .toArray();
 
       res.json({
-        chat,
-        other_user: otherUser,
-        messages,
+        chat: { ...chat, _id: chat._id.toString() },
+        other_user: { ...otherUser, _id: otherUser._id.toString() },
+        messages: messages.map(m => ({ ...m, _id: m._id.toString(), chat_id: m.chat_id.toString(), sender_id: m.sender_id.toString() })),
         current_user_id: req.userId,
       });
     } catch (error) {
@@ -112,11 +118,11 @@ module.exports = (Chat, Message, User) => {
   // Create or get chat with another user
   router.post('/init/:userId', verifyToken, async (req, res) => {
     try {
-      const user1Id = new mongoose.Types.ObjectId(req.userId);
-      const user2Id = new mongoose.Types.ObjectId(req.params.userId);
+      const user1Id = new ObjectId(req.userId);
+      const user2Id = new ObjectId(req.params.userId);
 
       // Check if chat already exists
-      let chat = await Chat.findOne({
+      let chat = await chatsCollection.findOne({
         $or: [
           { user1_id: user1Id, user2_id: user2Id },
           { user1_id: user2Id, user2_id: user1Id },
@@ -124,14 +130,15 @@ module.exports = (Chat, Message, User) => {
       });
 
       if (!chat) {
-        chat = new Chat({
+        const result = await chatsCollection.insertOne({
           user1_id: user1Id,
           user2_id: user2Id,
+          created_at: new Date(),
         });
-        await chat.save();
+        chat = { _id: result.insertedId };
       }
 
-      res.json({ chat_id: chat._id });
+      res.json({ chat_id: chat._id.toString() });
     } catch (error) {
       console.error('[v0] Error initializing chat:', error);
       res.status(500).json({ message: 'Error initializing chat' });

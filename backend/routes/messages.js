@@ -1,8 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
+const { ObjectId } = require('mongodb');
 
-module.exports = (Message, Chat) => {
+module.exports = (messagesCollection, chatsCollection) => {
   const router = express.Router();
   const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -33,7 +33,7 @@ module.exports = (Message, Chat) => {
       }
 
       // Verify user is part of this chat
-      const chat = await Chat.findById(chat_id);
+      const chat = await chatsCollection.findOne({ _id: new ObjectId(chat_id) });
       if (!chat) {
         return res.status(404).json({ message: 'Chat not found' });
       }
@@ -46,19 +46,28 @@ module.exports = (Message, Chat) => {
       }
 
       // Create message
-      const message = new Message({
-        chat_id: new mongoose.Types.ObjectId(chat_id),
-        sender_id: new mongoose.Types.ObjectId(req.userId),
+      const result = await messagesCollection.insertOne({
+        chat_id: new ObjectId(chat_id),
+        sender_id: new ObjectId(req.userId),
         text,
+        timestamp: new Date(),
+        seen: false,
+        read_at: null,
       });
-
-      await message.save();
 
       console.log('[v0] Message sent in chat', chat_id);
 
       res.json({
         message: 'Message sent',
-        data: message,
+        data: {
+          _id: result.insertedId.toString(),
+          chat_id,
+          sender_id: req.userId,
+          text,
+          timestamp: new Date(),
+          seen: false,
+          read_at: null,
+        },
       });
     } catch (error) {
       console.error('[v0] Error sending message:', error);
@@ -69,16 +78,51 @@ module.exports = (Message, Chat) => {
   // Get messages for a chat
   router.get('/chat/:chatId', verifyToken, async (req, res) => {
     try {
-      const messages = await Message.find({
-        chat_id: req.params.chatId,
-      })
+      const messages = await messagesCollection
+        .find({ chat_id: new ObjectId(req.params.chatId) })
         .sort({ timestamp: 1 })
-        .lean();
+        .toArray();
 
-      res.json({ messages });
+      res.json({
+        messages: messages.map(m => ({
+          ...m,
+          _id: m._id.toString(),
+          chat_id: m.chat_id.toString(),
+          sender_id: m.sender_id.toString(),
+        })),
+      });
     } catch (error) {
       console.error('[v0] Error fetching messages:', error);
       res.status(500).json({ message: 'Error fetching messages' });
+    }
+  });
+
+  // Mark messages as read
+  router.put('/read/:chatId', verifyToken, async (req, res) => {
+    try {
+      const chatId = new ObjectId(req.params.chatId);
+      const userId = new ObjectId(req.userId);
+
+      // Mark all messages from other users in this chat as read
+      const result = await messagesCollection.updateMany(
+        { chat_id: chatId, sender_id: { $ne: userId }, seen: false },
+        { 
+          $set: { 
+            seen: true,
+            read_at: new Date(),
+          }
+        }
+      );
+
+      console.log('[v0] Marked', result.modifiedCount, 'messages as read');
+
+      res.json({ 
+        message: 'Messages marked as read',
+        modifiedCount: result.modifiedCount,
+      });
+    } catch (error) {
+      console.error('[v0] Error marking messages as read:', error);
+      res.status(500).json({ message: 'Error marking messages as read' });
     }
   });
 

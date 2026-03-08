@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, use } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
@@ -11,6 +11,8 @@ interface Message {
   sender_id: string
   text: string
   timestamp: string
+  seen?: boolean
+  read_at?: string | null
 }
 
 interface ChatData {
@@ -26,52 +28,105 @@ interface ChatData {
 export default function ChatDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id: chatId } = use(params)
   const [chatData, setChatData] = useState<ChatData | null>(null)
   const [messageText, setMessageText] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [userId, setUserId] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadChat()
     const interval = setInterval(loadChat, 2000)
     return () => clearInterval(interval)
-  }, [params.id])
+  }, [chatId])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatData?.messages])
 
-  const loadChat = async () => {
+  const markMessagesAsRead = async () => {
     const token = localStorage.getItem('token')
     if (!token) return
 
     try {
-      const response = await fetch(`http://localhost:5000/api/chats/${params.id}`, {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+      await fetch(`http://localhost:5000/api/messages/read/${chatId}`, {
+        method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
+    } catch (err) {
+      console.error('[v0] Error marking messages as read:', err)
+    }
+  }
+
+  const loadChat = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setError('No authentication token found')
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      console.log('[v0] Loading chat:', chatId)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+
+      const response = await fetch(`http://localhost:5000/api/chats/${chatId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
 
       if (response.ok) {
         const data = await response.json()
+        console.log('[v0] Chat loaded successfully:', data)
         setChatData(data)
         if (!userId && data.current_user_id) {
           setUserId(data.current_user_id)
         }
         setIsLoading(false)
+        setError(null)
+        // Mark messages as read when chat is loaded
+        await markMessagesAsRead()
+      } else {
+        console.error('[v0] Chat response not ok:', response.status)
+        setError(`Failed to load chat: ${response.statusText}`)
+        setIsLoading(false)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[v0] Error loading chat:', err)
+      const errorMsg = err.name === 'AbortError' 
+        ? 'Request timeout - Backend server not responding'
+        : `Error: ${err.message}`
+      setError(errorMsg)
+      setIsLoading(false)
     }
   }
 
   const sendMessage = async () => {
-    if (!messageText.trim() || !userId) return
+    if (!messageText.trim() || !userId) {
+      console.log('[v0] Cannot send message - missing text or userId')
+      return
+    }
 
     setIsSending(true)
     try {
+      console.log('[v0] Sending message:', messageText)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+
       const response = await fetch('http://localhost:5000/api/messages', {
         method: 'POST',
         headers: {
@@ -79,27 +134,61 @@ export default function ChatDetailPage({
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
-          chat_id: params.id,
+          chat_id: chatId,
           text: messageText,
         }),
+        signal: controller.signal,
       })
 
+      clearTimeout(timeoutId)
+
       if (response.ok) {
+        console.log('[v0] Message sent successfully')
         setMessageText('')
+        setError(null)
         await loadChat()
+      } else {
+        console.error('[v0] Send message response not ok:', response.status)
+        setError(`Failed to send message: ${response.statusText}`)
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[v0] Error sending message:', err)
+      const errorMsg = err.name === 'AbortError'
+        ? 'Request timeout - Failed to send message'
+        : `Error sending message: ${err.message}`
+      setError(errorMsg)
     } finally {
       setIsSending(false)
     }
   }
 
+  if (error && !chatData) {
+    return (
+      <main className="px-6 py-12 max-w-2xl mx-auto">
+        <Card className="p-8 bg-destructive/10 border-destructive/50">
+          <h2 className="text-xl font-semibold text-destructive mb-2">Error Loading Chat</h2>
+          <p className="text-sm text-foreground mb-6">{error}</p>
+          <Button 
+            onClick={() => {
+              setError(null)
+              setIsLoading(true)
+              loadChat()
+            }}
+            variant="outline"
+          >
+            Retry
+          </Button>
+        </Card>
+      </main>
+    )
+  }
+
   if (isLoading || !chatData) {
     return (
       <main className="px-6 py-12 max-w-2xl mx-auto">
-        <div className="flex items-center justify-center h-96">
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-sm text-muted-foreground">Loading chat...</p>
         </div>
       </main>
     )
@@ -107,6 +196,11 @@ export default function ChatDetailPage({
 
   return (
     <main className="px-6 py-12 max-w-2xl mx-auto">
+      {error && (
+        <Card className="p-4 mb-6 bg-destructive/10 border-destructive/50">
+          <p className="text-sm text-destructive">{error}</p>
+        </Card>
+      )}
       <Card className="bg-card border-border flex flex-col h-[600px]">
         {/* Header */}
         <div className="p-6 border-b border-border">
@@ -140,9 +234,16 @@ export default function ChatDetailPage({
                   }`}
                 >
                   <p className="text-sm">{msg.text}</p>
-                  <p className="text-xs opacity-70 mt-1">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </p>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <p className="text-xs opacity-70">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </p>
+                    {msg.sender_id === userId && (
+                      <span className="text-xs opacity-70" title={msg.seen ? 'Seen' : 'Sent'}>
+                        {msg.seen ? '✓✓' : '✓'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
