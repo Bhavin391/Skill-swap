@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Sparkles, TrendingUp } from 'lucide-react'
 
 interface SkillData {
   skills_offering: string[]
@@ -100,113 +100,137 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="px-6 py-12 max-w-6xl mx-auto">
-      <div className="mb-12">
-        <h1 className="text-4xl font-bold text-foreground mb-2">Your Skills</h1>
-        <p className="text-muted-foreground">
-          Tell us what you can teach and what you'd like to learn
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Skills Offering */}
-        <Card className="p-8 bg-card border-border">
-          <h2 className="text-2xl font-semibold text-foreground mb-6">Can Teach</h2>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Add a skill (e.g., Python)"
-                value={newOffering}
-                onChange={e => setNewOffering(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && addOffering()}
-                className="flex-1"
-              />
-              <Button
-                onClick={addOffering}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-2 mt-6">
-              {skillData.skills_offering.map(skill => (
-                <div
-                  key={skill}
-                  className="flex items-center justify-between bg-primary/10 border border-primary/30 px-4 py-3 rounded-lg"
-                >
-                  <span className="text-foreground font-medium">{skill}</span>
-                  <button
-                    onClick={() => removeOffering(skill)}
-                    className="text-muted-foreground hover:text-destructive transition"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-              {skillData.skills_offering.length === 0 && (
-                <p className="text-muted-foreground text-sm py-6 text-center">
-                  Add skills you can teach
-                </p>
-              )}
-            </div>
+    <main className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background py-12">
+      <div className="max-w-6xl mx-auto px-6">
+        {/* Header */}
+        <div className="mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Build Your Profile</span>
           </div>
-        </Card>
+          <h1 className="text-5xl font-bold text-foreground mb-3">Your Skills</h1>
+          <p className="text-lg text-muted-foreground">Tell us what you can teach and what you'd like to learn to find perfect matches</p>
+        </div>
 
-        {/* Skills Learning */}
-        <Card className="p-8 bg-card border-border">
-          <h2 className="text-2xl font-semibold text-foreground mb-6">Want to Learn</h2>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Add a skill (e.g., JavaScript)"
-                value={newLearning}
-                onChange={e => setNewLearning(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && addLearning()}
-                className="flex-1"
-              />
-              <Button
-                onClick={addLearning}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
+        {/* Skills Section */}
+        <div className="grid md:grid-cols-2 gap-8 mb-12">
+          {/* Can Teach */}
+          <Card className="p-8 bg-card border-border/50 hover:border-primary/30 transition-all duration-300 shadow-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-blue-500/20 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Can Teach</h2>
+                <p className="text-sm text-muted-foreground">Skills you can share</p>
+              </div>
             </div>
-
-            <div className="space-y-2 mt-6">
-              {skillData.skills_learning.map(skill => (
-                <div
-                  key={skill}
-                  className="flex items-center justify-between bg-primary/10 border border-primary/30 px-4 py-3 rounded-lg"
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g., Python, Guitar, Design..."
+                  value={newOffering}
+                  onChange={e => setNewOffering(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && addOffering()}
+                  className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-primary"
+                />
+                <Button
+                  onClick={addOffering}
+                  className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground hover:shadow-lg hover:shadow-primary/50 transition-all duration-300 group"
                 >
-                  <span className="text-foreground font-medium">{skill}</span>
-                  <button
-                    onClick={() => removeLearning(skill)}
-                    className="text-muted-foreground hover:text-destructive transition"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-              {skillData.skills_learning.length === 0 && (
-                <p className="text-muted-foreground text-sm py-6 text-center">
-                  Add skills you'd like to learn
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
+                  <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                </Button>
+              </div>
 
-      {/* Save Button */}
-      <div className="mt-12 flex justify-center">
-        <Button
-          onClick={saveSkills}
-          disabled={isSaving}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 px-8"
-        >
-          {isSaving ? 'Saving...' : 'Save Skills & Find Matches'}
-        </Button>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {skillData.skills_offering.map((skill, i) => (
+                  <div
+                    key={skill}
+                    className="flex items-center justify-between bg-gradient-to-r from-primary/10 to-blue-500/10 px-4 py-3 rounded-lg border border-primary/20 hover:border-primary/50 transition-all duration-200 animate-in fade-in slide-in-from-left"
+                    style={{ animationDelay: `${i * 50}ms` }}
+                  >
+                    <span className="text-foreground font-medium">{skill}</span>
+                    <button
+                      onClick={() => removeOffering(skill)}
+                      className="text-muted-foreground hover:text-destructive transition-colors duration-200 hover:scale-110"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Want to Learn */}
+          <Card className="p-8 bg-card border-border/50 hover:border-primary/30 transition-all duration-300 shadow-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-blue-500/20 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Want to Learn</h2>
+                <p className="text-sm text-muted-foreground">Skills you'd like to acquire</p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g., JavaScript, Yoga, Marketing..."
+                  value={newLearning}
+                  onChange={e => setNewLearning(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && addLearning()}
+                  className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-primary"
+                />
+                <Button
+                  onClick={addLearning}
+                  className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground hover:shadow-lg hover:shadow-primary/50 transition-all duration-300 group"
+                >
+                  <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                </Button>
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {skillData.skills_learning.map((skill, i) => (
+                  <div
+                    key={skill}
+                    className="flex items-center justify-between bg-gradient-to-r from-primary/10 to-blue-500/10 px-4 py-3 rounded-lg border border-primary/20 hover:border-primary/50 transition-all duration-200 animate-in fade-in slide-in-from-right"
+                    style={{ animationDelay: `${i * 50}ms` }}
+                  >
+                    <span className="text-foreground font-medium">{skill}</span>
+                    <button
+                      onClick={() => removeLearning(skill)}
+                      className="text-muted-foreground hover:text-destructive transition-colors duration-200 hover:scale-110"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Save Button */}
+        <div className="flex justify-center">
+          <Button
+            onClick={saveSkills}
+            disabled={isSaving}
+            className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground hover:shadow-lg hover:shadow-primary/50 transition-all duration-300 px-8 py-6 text-lg group disabled:opacity-70"
+          >
+            {isSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                Saving Skills...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 mr-2 group-hover:animate-spin" />
+                Save Skills & Find Matches
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </main>
   )
