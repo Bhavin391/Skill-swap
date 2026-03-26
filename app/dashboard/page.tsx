@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Plus, X, Sparkles, TrendingUp } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, X, Sparkles, TrendingUp, Edit2, MessageSquare, Users, Zap } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface SkillData {
   skills_offering: string[]
@@ -100,18 +102,53 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background py-12">
-      <div className="max-w-6xl mx-auto px-6">
+    <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
+      {/* Animated Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-6">
         {/* Header */}
-        <div className="mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Build Your Profile</span>
+        <div className="mb-12 animate-slide-down">
+          <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 backdrop-blur-sm mb-6">
+            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+            <span className="text-sm font-semibold text-primary">Manage Your Learning Profile</span>
           </div>
-          <h1 className="text-5xl font-bold text-foreground mb-3">Your Skills</h1>
-          <p className="text-lg text-muted-foreground">Tell us what you can teach and what you'd like to learn to find perfect matches</p>
+          <h1 className="text-5xl md:text-6xl font-black text-foreground mb-3">Your Skills Hub</h1>
+          <p className="text-lg text-muted-foreground max-w-3xl">Master your learning journey. Add skills you teach, skills you want to learn, and connect with perfect learning partners.</p>
         </div>
 
+        {/* Dashboard Stats Cards */}
+        <div className="grid md:grid-cols-4 gap-6 mb-12">
+          {[
+            { label: 'Skills Teaching', value: skillData.skills_offering.length, icon: TrendingUp, color: 'from-primary/20 to-blue-500/20' },
+            { label: 'Skills Learning', value: skillData.skills_learning.length, icon: Users, color: 'from-accent/20 to-purple-500/20' },
+            { label: 'Active Matches', value: '—', icon: MessageSquare, color: 'from-green-500/20 to-emerald-500/20' },
+            { label: 'Messages', value: '0', icon: Zap, color: 'from-yellow-500/20 to-orange-500/20' }
+          ].map((stat, i) => (
+            <Card key={i} className="p-6 bg-gradient-to-br from-card/80 to-card/50 border border-primary/10 hover:border-primary/40 backdrop-blur-sm animate-fade-scale group" style={{ animationDelay: `${0.1 * i}s` }}>
+              <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3`}>
+                <stat.icon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+              </div>
+              <p className="text-muted-foreground text-sm mb-1">{stat.label}</p>
+              <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+            </Card>
+          ))}
+        </div>
+
+        {/* Tabbed Sections */}
+        <Tabs defaultValue="skills" className="w-full">
+          <TabsList className="grid w-full md:grid-cols-4 bg-card/50 border border-primary/10 p-1 mb-8">
+            <TabsTrigger value="skills" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Manage Skills</TabsTrigger>
+            <TabsTrigger value="matches" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Your Matches</TabsTrigger>
+            <TabsTrigger value="messages" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Messages</TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Settings</TabsTrigger>
+          </TabsList>
+
+          {/* Manage Skills Tab */}
+          <TabsContent value="skills" className="space-y-8">
         {/* Skills Section */}
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           {/* Can Teach */}
@@ -211,26 +248,81 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Save Button */}
-        <div className="flex justify-center">
-          <Button
-            onClick={saveSkills}
-            disabled={isSaving}
-            className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground hover:shadow-lg hover:shadow-primary/50 transition-all duration-300 px-8 py-6 text-lg group disabled:opacity-70"
-          >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
-                Saving Skills...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 mr-2 group-hover:animate-spin" />
-                Save Skills & Find Matches
-              </>
-            )}
-          </Button>
-        </div>
+            {/* Save Button */}
+            <div className="flex justify-center">
+              <Button
+                onClick={saveSkills}
+                disabled={isSaving}
+                className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground hover:shadow-lg hover:shadow-primary/50 transition-all duration-300 px-10 py-6 text-lg group disabled:opacity-70"
+              >
+                {isSaving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                    Saving Skills...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5 mr-2 group-hover:animate-spin" />
+                    Save Skills & Find Matches
+                  </>
+                )}
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Your Matches Tab */}
+          <TabsContent value="matches" className="space-y-8">
+            <div className="grid gap-6">
+              <div className="text-center py-12">
+                <Users className="w-16 h-16 text-primary/50 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-foreground mb-2">No matches yet</h3>
+                <p className="text-muted-foreground mb-6">Save your skills to find compatible learning partners</p>
+                <Link href="/matches">
+                  <Button className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground">
+                    <Users className="w-4 h-4 mr-2" />
+                    View All Matches
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages" className="space-y-8">
+            <div className="text-center py-12">
+              <MessageSquare className="w-16 h-16 text-primary/50 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">No messages yet</h3>
+              <p className="text-muted-foreground mb-6">Start a conversation with your learning matches</p>
+              <Link href="/chat">
+                <Button className="bg-gradient-to-r from-primary to-blue-600 text-primary-foreground">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  View Messages
+                </Button>
+              </Link>
+            </div>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-8">
+            <Card className="p-8 bg-gradient-to-br from-card/80 to-card/50 border border-primary/10">
+              <h3 className="text-2xl font-bold text-foreground mb-6">Account Settings</h3>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-semibold text-foreground block mb-2">Privacy</label>
+                  <p className="text-sm text-muted-foreground">Manage who can see your profile and skills</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-foreground block mb-2">Notifications</label>
+                  <p className="text-sm text-muted-foreground">Get updates about matches and messages</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-foreground block mb-2">Learning Goals</label>
+                  <p className="text-sm text-muted-foreground">Set your learning targets and track progress</p>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </main>
   )
