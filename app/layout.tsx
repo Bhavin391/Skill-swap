@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -13,8 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SkillSwap AI",
-  description: "Discover partners to trade your expertise with.",
+  title: "SkillSwap - Peer-to-Peer Learning Platform",
+  description: "Exchange skills with peers worldwide. Learn what matters. Teach what you know.",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=5",
+  icons: {
+    icon: [{ url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%236366f1'>S</text></svg>" }],
+  },
 };
 
 export default function RootLayout({
@@ -23,10 +28,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geist.variable} ${geistMono.variable} antialiased bg-white text-slate-900`}>
-        {/* We removed the broken ThemeProvider. Just your app here now! */}
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${geist.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
