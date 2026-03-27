@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { MessageSquare, Users, Sparkles, Send, Search, Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Header } from '@/components/header'
+import { apiClient } from '@/lib/api-client'
 
 interface Conversation {
   _id: string
@@ -40,44 +41,37 @@ export default function ChatPage() {
     if (!token) return
 
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-
-      const response = await fetch('http://localhost:5000/api/chats', {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        const data = await response.json()
-        setConversations(data.chats || [])
-        setIsLoading(false)
-      }
+      const data = await apiClient.get('/api/chats')
+      setConversations(data.chats || [])
     } catch (err) {
       console.error('[v0] Error loading conversations:', err)
-      if (isLoading) setIsLoading(false)
+    } finally {
+      setIsLoading(false)
     }
   }
+
+  const filteredConversations = conversations.filter(conv =>
+    conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
   if (isLoading) {
     return (
       <>
         <Header />
         <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
-        <div className="fixed inset-0 pointer-events-none">
-          <div className="absolute top-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
-        </div>
-        <div className="relative max-w-4xl mx-auto px-6 flex items-center justify-center h-96">
-          <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary"></div>
-            <p className="text-muted-foreground font-medium">Loading conversations...</p>
-        </div>
-      </div>
-    </main>
-        </>
+          <div className="fixed inset-0 pointer-events-none">
+            <div className="absolute top-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float"></div>
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
+          </div>
+          <div className="relative max-w-4xl mx-auto px-6 flex items-center justify-center h-96">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary"></div>
+              <p className="text-muted-foreground font-medium">Loading conversations...</p>
+            </div>
+          </div>
+        </main>
+      </>
     )
   }
 
@@ -85,11 +79,6 @@ export default function ChatPage() {
     <>
       <Header />
       <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
-
-  const filteredConversations = conversations.filter(conv =>
-    conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">

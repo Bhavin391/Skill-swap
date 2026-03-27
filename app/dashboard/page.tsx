@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { Plus, X, Sparkles, TrendingUp, Edit2, MessageSquare, Users, Zap } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Header } from '@/components/header'
+import { apiClient } from '@/lib/api-client'
 
 interface SkillData {
   skills_offering: string[]
@@ -23,23 +25,20 @@ export default function DashboardPage() {
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    // Load user's skills from backend
-    const token = localStorage.getItem('token')
-    if (token) {
-      fetch('http://localhost:5000/api/users/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.user) {
-            setSkillData({
-              skills_offering: data.user.skills_offering || [],
-              skills_learning: data.user.skills_learning || [],
-            })
-          }
-        })
-        .catch(err => console.error('Error loading skills:', err))
+    const loadSkills = async () => {
+      try {
+        const data = await apiClient.get('/api/users/me')
+        if (data.user) {
+          setSkillData({
+            skills_offering: data.user.skills_offering || [],
+            skills_learning: data.user.skills_learning || [],
+          })
+        }
+      } catch (err) {
+        console.error('[v0] Error loading skills:', err)
+      }
     }
+    loadSkills()
   }, [])
 
   const addOffering = () => {
@@ -77,23 +76,10 @@ export default function DashboardPage() {
   }
 
   const saveSkills = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
     setIsSaving(true)
     try {
-      const response = await fetch('http://localhost:5000/api/users/me/skills', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(skillData),
-      })
-
-      if (response.ok) {
-        console.log('[v0] Skills saved successfully')
-      }
+      await apiClient.put('/api/users/me/skills', skillData)
+      console.log('[v0] Skills saved successfully')
     } catch (err) {
       console.error('[v0] Error saving skills:', err)
     } finally {
@@ -102,7 +88,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
+    <>
+      <Header />
+      <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
       {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float"></div>
@@ -325,5 +313,6 @@ export default function DashboardPage() {
         </Tabs>
       </div>
     </main>
+    </>
   )
 }

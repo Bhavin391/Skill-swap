@@ -5,20 +5,21 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Sun, Moon, Sparkles, LogOut } from 'lucide-react'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export function Header() {
   const { resolvedTheme, setTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
   const handleLogout = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch('/api/logout', { method: 'POST' })
-      if (response.ok) {
-        window.location.href = '/'
-      }
+      localStorage.removeItem('token')
+      console.log('[v0] User logged out successfully')
+      router.push('/')
     } catch (error) {
-      console.error('Logout failed:', error)
+      console.error('[v0] Logout failed:', error)
       setIsLoading(false)
     }
   }

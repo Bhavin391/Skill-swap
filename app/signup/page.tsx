@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { User, Mail, Lock, Sparkles, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -50,41 +51,18 @@ export default function SignupPage() {
     setIsLoading(true)
     try {
       console.log('[v0] Signup attempt:', { name: formData.name, email: formData.email })
-      
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
 
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
-        signal: controller.signal,
+      const data = await apiClient.post('/api/auth/signup', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
       })
 
-      clearTimeout(timeoutId)
-
-      console.log('[v0] Response status:', response.status)
-      
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.message || 'Signup failed')
-        console.log('[v0] Signup error:', data.message)
-        return
-      }
-
       console.log('[v0] Signup successful, redirecting...')
-      // Store token
       localStorage.setItem('token', data.token)
       router.push('/dashboard')
     } catch (err: any) {
-      const errorMsg = err.name === 'AbortError'
-        ? 'Connection timeout - Backend server not responding on http://localhost:5000'
-        : `Connection error: ${err.message || 'Unknown error'}. Make sure backend is running on port 5000.`
+      const errorMsg = err.message || 'Connection error. Make sure backend is running.'
       setError(errorMsg)
       console.error('[v0] Signup error:', err)
     } finally {

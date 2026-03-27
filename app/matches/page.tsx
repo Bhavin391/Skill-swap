@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
 import { MessageSquare, Star, Users, Sparkles, Filter, TrendingUp } from 'lucide-react'
+import { Header } from '@/components/header'
+import { apiClient } from '@/lib/api-client'
 
 interface Match {
   _id: string
@@ -28,81 +30,31 @@ export default function MatchesPage() {
   }, [])
 
   const loadMatches = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      setError('Authentication required')
-      setIsLoading(false)
-      return
-    }
-
     setIsLoading(true)
     try {
       console.log('[v0] Loading matches...')
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-
-      const response = await fetch('http://localhost:5000/api/matches', {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('[v0] Matches loaded:', data.matches?.length || 0)
-        setMatches(data.matches || [])
-        setError('')
-      } else {
-        console.error('[v0] Matches response error:', response.status)
-        setError(`Failed to load matches: ${response.statusText}`)
-      }
+      const data = await apiClient.get('/api/matches')
+      console.log('[v0] Matches loaded:', data.matches?.length || 0)
+      setMatches(data.matches || [])
+      setError('')
     } catch (err: any) {
       console.error('[v0] Error loading matches:', err)
-      const errorMsg = err.name === 'AbortError'
-        ? 'Connection timeout - Backend server not responding'
-        : `Error loading matches: ${err.message}`
-      setError(errorMsg)
+      setError(err.message || 'Error loading matches')
     } finally {
       setIsLoading(false)
     }
   }
 
   const initiateChatWithMatch = async (userId: string) => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      setError('Authentication required')
-      return
-    }
-
     setInitiatingChat(userId)
     try {
       console.log('[v0] Initiating chat with user:', userId)
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-
-      const response = await fetch(`http://localhost:5000/api/chats/init/${userId}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      })
-
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('[v0] Chat initiated, chat_id:', data.chat_id)
-        router.push(`/chat/${data.chat_id}`)
-      } else {
-        console.error('[v0] Chat init response error:', response.status)
-        setError(`Failed to start chat: ${response.statusText}`)
-      }
+      const data = await apiClient.post(`/api/chats/init/${userId}`)
+      console.log('[v0] Chat initiated, chat_id:', data.chat_id)
+      router.push(`/chat/${data.chat_id}`)
     } catch (err: any) {
       console.error('[v0] Error initiating chat:', err)
-      const errorMsg = err.name === 'AbortError'
-        ? 'Connection timeout - Failed to start chat'
-        : `Error starting chat: ${err.message}`
-      setError(errorMsg)
+      setError(err.message || 'Error starting chat')
     } finally {
       setInitiatingChat(null)
     }
@@ -126,7 +78,9 @@ export default function MatchesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
+    <>
+      <Header />
+      <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
       {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float"></div>
@@ -278,5 +232,6 @@ export default function MatchesPage() {
         )}
       </div>
     </main>
+    </>
   )
 }
