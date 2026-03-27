@@ -1,6 +1,6 @@
 'use client'
 
-import { useTheme } from '@/providers/theme-provider'
+import { useTheme } from '@/components/theme-provider'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Sun, Moon, Sparkles, LogOut } from 'lucide-react'
