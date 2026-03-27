@@ -23,6 +23,8 @@ export const apiClient = {
       headers.Authorization = `Bearer ${token}`;
     }
 
+    console.log(`[v0] API ${fetchOptions.method || 'GET'} ${url}`);
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -35,17 +37,36 @@ export const apiClient = {
 
       clearTimeout(timeoutId);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || `API error: ${response.status}`);
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('[v0] Failed to parse response as JSON:', response.status, response.statusText);
+        throw new Error(`Server returned invalid JSON: ${response.statusText}`);
       }
 
+      if (!response.ok) {
+        const errorMsg = data?.message || data?.error || `API error: ${response.status}`;
+        console.error(`[v0] API Error: ${response.status} - ${errorMsg}`);
+        throw new Error(errorMsg);
+      }
+
+      console.log(`[v0] API Success: ${response.status}`);
       return data;
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        throw new Error(`Request timeout - Backend server not responding on ${API_BASE_URL}`);
+        const msg = `Request timeout (${timeout}ms) - Is backend running on ${API_BASE_URL}?`;
+        console.error(`[v0] ${msg}`);
+        throw new Error(msg);
       }
+      
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        const msg = `Connection failed - Is backend running on ${API_BASE_URL}? Check CORS and firewall.`;
+        console.error(`[v0] ${msg}`, error);
+        throw new Error(msg);
+      }
+
+      console.error('[v0] API Request Error:', error.message);
       throw error;
     }
   },
