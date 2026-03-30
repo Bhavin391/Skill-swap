@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { User, Mail, Edit2, Sparkles, Award, TrendingUp, Users } from 'lucide-react'
 import { Header } from '@/components/header'
+import { apiClient } from '@/lib/api-client'
 
 interface UserProfile {
   _id: string
@@ -25,18 +26,9 @@ export default function ProfilePage() {
   }, [])
 
   const loadProfile = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
     try {
-      const response = await fetch('http://localhost:5000/api/users/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setProfile(data.user)
-      }
+      const data = await apiClient.get('/api/users/me')
+      setProfile(data.user)
     } catch (err) {
       console.error('[v0] Error loading profile:', err)
     } finally {

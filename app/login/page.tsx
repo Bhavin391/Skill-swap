@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Mail, Lock, Sparkles, Eye, EyeOff } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,38 +38,17 @@ export default function LoginPage() {
     setIsLoading(true)
     try {
       console.log('[v0] Login attempt:', { email: formData.email })
-      
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
 
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-        signal: controller.signal,
+      const data = await apiClient.post('/api/auth/login', {
+        email: formData.email,
+        password: formData.password,
       })
 
-      clearTimeout(timeoutId)
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.message || 'Login failed')
-        console.log('[v0] Login error:', data.message)
-        return
-      }
-
       console.log('[v0] Login successful, redirecting...')
-      // Store token
       localStorage.setItem('token', data.token)
       router.push('/dashboard')
     } catch (err: any) {
-      const errorMsg = err.name === 'AbortError' 
-        ? 'Connection timeout - Backend server not responding on http://localhost:5000'
-        : `Error: ${err.message || 'Failed to connect to server'}`
+      const errorMsg = err.message || 'Failed to connect to server'
       setError(errorMsg)
       console.error('[v0] Login error:', err)
     } finally {
