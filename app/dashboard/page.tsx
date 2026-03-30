@@ -115,9 +115,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <>
-      <Header />
-      <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
+    <main className="min-h-screen bg-gradient-to-b from-background via-background to-secondary/10 py-12">
         {/* Animated Background */}
         <div className="fixed inset-0 pointer-events-none">
           <div className="absolute top-20 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-float"></div>
@@ -266,6 +264,5 @@ export default function DashboardPage() {
           </div>
       </div>
     </main>
-    </>
   )
 }
