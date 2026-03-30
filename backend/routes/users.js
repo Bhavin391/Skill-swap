@@ -26,15 +26,18 @@ module.exports = (usersCollection) => {
   // Get current user
   router.get('/me', verifyToken, async (req, res) => {
     try {
+      console.log('[v0] Fetching user with ID:', req.userId);
       const user = await usersCollection.findOne({ _id: new ObjectId(req.userId) });
       if (!user) {
+        console.log('[v0] User not found for ID:', req.userId);
         return res.status(404).json({ message: 'User not found' });
       }
+      console.log('[v0] User found:', user.email);
       const { password, ...userWithoutPassword } = user;
       res.json({ user: { ...userWithoutPassword, _id: user._id.toString() } });
     } catch (error) {
-      console.error('[v0] Error fetching user:', error);
-      res.status(500).json({ message: 'Error fetching user' });
+      console.error('[v0] Error fetching user:', error.message);
+      res.status(500).json({ message: 'Error fetching user: ' + error.message });
     }
   });
 
