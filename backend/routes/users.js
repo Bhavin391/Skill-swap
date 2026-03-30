@@ -8,18 +8,24 @@ module.exports = (usersCollection) => {
 
   // Middleware to verify token
   const verifyToken = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
+    const authHeader = req.headers.authorization;
+    console.log('[v0] Auth header:', authHeader ? 'present' : 'missing');
+    
+    const token = authHeader?.split(' ')[1];
     if (!token) {
+      console.log('[v0] No token found in authorization header');
       return res.status(401).json({ message: 'No token provided' });
     }
 
     try {
+      console.log('[v0] Verifying token...');
       const decoded = jwt.verify(token, JWT_SECRET);
+      console.log('[v0] Token decoded, userId:', decoded.userId);
       req.userId = decoded.userId;
       next();
     } catch (error) {
-      console.error('[v0] Token verification error:', error);
-      res.status(401).json({ message: 'Invalid token' });
+      console.error('[v0] Token verification error:', error.message);
+      res.status(401).json({ message: 'Invalid token: ' + error.message });
     }
   };
 
