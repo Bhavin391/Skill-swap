@@ -143,10 +143,9 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Manage Skills Section */}
           <div className="space-y-8">
-        {/* Skills Section */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
+            {/* Manage Your Skills */}
+            <div className="grid md:grid-cols-2 gap-8 mb-12">
           {/* Can Teach */}
           <Card className="p-8 bg-card border-border/50 hover:border-primary/30 transition-all duration-300 shadow-lg">
             <div className="flex items-center gap-3 mb-6">
